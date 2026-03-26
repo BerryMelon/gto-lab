@@ -21,6 +21,8 @@ export default function GTOLab() {
   
   const trainerRef = useRef<KuhnTrainer>(new KuhnTrainer());
   const animationRef = useRef<number>(null);
+  const lastChartUpdateRef = useRef<number>(0);
+  const totalIterationsRef = useRef<number>(0);
 
   // Derived data for the table
   const strategyResults = useMemo(() => {
@@ -31,17 +33,17 @@ export default function GTOLab() {
     if (!isRunning) return;
     
     trainerRef.current.train(speed);
-    setIterations(prev => prev + speed);
+    totalIterationsRef.current += speed;
+    const newIterations = totalIterationsRef.current;
+    
+    // Batch UI updates
+    setIterations(newIterations);
 
     // Update chart data periodically
-    if (iterations % (speed * 5) === 0 || iterations < 100) {
+    if (newIterations - lastChartUpdateRef.current >= Math.max(10, speed * 2)) {
+      lastChartUpdateRef.current = newIterations;
       const results = trainerRef.current.getResults();
-      const point: HistoryPoint = { iteration: iterations };
-      
-      // We'll track a few key nodes for the chart
-      // 1: Jack, 2: Queen, 3: King
-      // P1 actions: "" (empty history)
-      // P2 actions: "p" (P1 passed), "b" (P1 bet)
+      const point: HistoryPoint = { iteration: newIterations };
       
       const keyNodes = [
         { key: '1', label: 'P1 Bluff (J)' },
@@ -53,12 +55,14 @@ export default function GTOLab() {
       keyNodes.forEach(n => {
         const node = results.find(r => r.infoSet === n.key);
         if (node) {
-          // Action 1 is 'BET' or 'CALL'
           point[n.label] = parseFloat(node.strategy[1].toFixed(3));
         }
       });
 
-      setChartData(prev => [...prev.slice(-100), point]);
+      setChartData(prev => {
+        const newData = [...prev, point];
+        return newData.slice(-100);
+      });
     }
 
     animationRef.current = requestAnimationFrame(tick);
@@ -73,11 +77,13 @@ export default function GTOLab() {
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [isRunning, iterations, speed]);
+  }, [isRunning, speed]);
 
   const handleReset = () => {
     setIsPlaying(false);
     trainerRef.current = new KuhnTrainer();
+    totalIterationsRef.current = 0;
+    lastChartUpdateRef.current = 0;
     setIterations(0);
     setChartData([]);
   };
