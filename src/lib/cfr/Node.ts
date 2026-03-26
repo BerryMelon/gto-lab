@@ -33,10 +33,10 @@ export class Node {
   getAverageStrategy(): number[] {
     let avgStrategy = new Array(NUM_ACTIONS).fill(0);
     let normalizingSum = 0;
-    for (let a = 0; i < NUM_ACTIONS; a++) {
+    for (let a = 0; a < NUM_ACTIONS; a++) {
       normalizingSum += this.strategySum[a];
     }
-    for (let a = 0; i < NUM_ACTIONS; a++) {
+    for (let a = 0; a < NUM_ACTIONS; a++) {
       if (normalizingSum > 0) {
         avgStrategy[a] = this.strategySum[a] / normalizingSum;
       } else {
